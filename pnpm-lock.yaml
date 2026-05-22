@@ -24,7 +24,7 @@ importers:
   packages/next:
     dependencies:
       '@leadrails/sdk':
-        specifier: 0.1.1
+        specifier: 0.1.2-rc.0
         version: link:../sdk
       next:
         specifier: '>=13.4.0'
