@@ -1,0 +1,67 @@
+{
+  "name": "@leadrails/next",
+  "version": "0.1.0",
+  "description": "Next.js adapter for @leadrails/sdk. createLeadEventRoute + createLeadEventAction + lint preset (oxlint + ESLint).",
+  "license": "MIT",
+  "author": "Austin Lowther <dev@austin.lowther.me>",
+  "homepage": "https://leadrails.dev/?ref=npm",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/leadrails/sdk.git",
+    "directory": "packages/next"
+  },
+  "bugs": {
+    "url": "https://github.com/leadrails/sdk/issues"
+  },
+  "keywords": [
+    "leadrails",
+    "next",
+    "nextjs",
+    "route-handler",
+    "server-action",
+    "hmac",
+    "webhook"
+  ],
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./lint/oxlint": "./src/lint/oxlint.js",
+    "./lint/eslint": "./src/lint/eslint.js"
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "workerd": "./dist/index.js",
+        "deno": "./dist/index.js",
+        "bun": "./dist/index.js",
+        "node": "./dist/index.js",
+        "default": "./dist/index.js"
+      },
+      "./lint/oxlint": "./src/lint/oxlint.js",
+      "./lint/eslint": "./src/lint/eslint.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist"
+  },
+  "peerDependencies": {
+    "@leadrails/sdk": "^0.1.0"
+  },
+  "dependencies": {
+    "@leadrails/sdk": "workspace:*",
+    "server-only": "^0.0.1"
+  }
+}

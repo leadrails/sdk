@@ -1,0 +1,62 @@
+{
+  "name": "@leadrails/sdk",
+  "version": "0.1.0",
+  "description": "Server-only SDK to send HMAC-signed lead events to LeadRails. Works in Node, Bun, Deno, Cloudflare Workers, Vercel Edge.",
+  "license": "MIT",
+  "author": "Austin Lowther <dev@austin.lowther.me>",
+  "homepage": "https://leadrails.dev/?ref=npm",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/leadrails/sdk.git",
+    "directory": "packages/sdk"
+  },
+  "bugs": {
+    "url": "https://github.com/leadrails/sdk/issues"
+  },
+  "keywords": [
+    "leadrails",
+    "lead-routing",
+    "hmac",
+    "webhook",
+    "sdk",
+    "cloudflare-workers",
+    "edge",
+    "serverless"
+  ],
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "workerd": "./dist/index.js",
+        "deno": "./dist/index.js",
+        "bun": "./dist/index.js",
+        "node": "./dist/index.js",
+        "browser": "./dist/browser-stub.js",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && cp src/browser-stub.js dist/browser-stub.js",
+    "clean": "rm -rf dist",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "server-only": "^0.0.1"
+  }
+}
