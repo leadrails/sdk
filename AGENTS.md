@@ -79,18 +79,97 @@ It scans `packages/*/package.json` and only flags
 `dependencies` / `peerDependencies` / `optionalDependencies` —
 `devDependencies` can use `workspace:*` freely (they're not published).
 
-## Publishing flow (current)
+## Dry-run is a simulation, not reality
+
+**A dry-run / `--dry-run` / lint / typecheck / smoke is a simulation
+of the real action. It runs a different program against the same
+input.** When the dry-run passes, that proves the simulation
+succeeds. It does NOT prove the real action will succeed.
+
+This sounds obvious. It is not, because every dry-run is sold as
+"the real thing without side effects" — that framing is a lie.
+
+We have learned this the hard way twice now:
+
+- **0.1.0**: `tsc` compiled. `pnpm test` passed. Both lied — neither
+  exercised the published artifact in plain Node ESM.
+- **0.1.1**: `jsr publish --dry-run` passed. It lied — the real
+  `jsr publish` runs a constraint-resolution validation the dry-run
+  does not, and that validation rejected the publish.
+
+### The rule
+
+For any irreversible action (publishing to a public registry,
+deploying to production, sending a customer-visible event) where
+no staging environment exists:
+
+1. **Do not treat the dry-run as authoritative.** Treat it as
+   "necessary but not sufficient."
+2. **Find a way to do the REAL action in a way that doesn't
+   matter.** For npm/JSR: publish a pre-release version
+   (`0.1.2-rc.0`, `0.1.2-rc.1`, ...). RC versions are real
+   publishes — they exercise every code path the stable publish
+   would — but consumers don't pick them up by default.
+3. **Only after a real pre-release publish succeeds** end-to-end,
+   bump to the stable version and publish that.
+4. **rc numbers are free.** Iterate `rc.0` → `rc.1` → `rc.2` as
+   needed. Burning rc numbers is fine; burning stable version
+   numbers is not.
+
+### The publish flow
 
 1. Bump the version in `packages/<pkg>/package.json` AND
-   `packages/<pkg>/jsr.json` (the two must agree).
-2. `pnpm -r build` from the repo root — produces the `dist/` artifacts
-   that npm consumers ship from (`publishConfig.main` / `.types`).
-3. npm: `cd packages/<pkg> && pnpm publish --access public`.
-4. JSR: `cd packages/<pkg> && pnpm dlx jsr publish` (or use the JSR
-   web flow that the OAuth approval page provides).
+   `packages/<pkg>/jsr.json` to `<x.y.z>-rc.0` (the two must agree).
+   If the next-package depends on the sdk-package, bump
+   `peerDependencies` and `dependencies` ranges to `^<x.y.z>-rc.0`.
+2. `pnpm -r build` from the repo root — produces the `dist/`
+   artifacts that npm consumers ship from.
+3. npm: `cd packages/<pkg> && pnpm publish --tag rc --access public`.
+   The `--tag rc` ensures the rc version does NOT become `latest`.
+4. JSR: `cd packages/<pkg> && pnpm dlx jsr publish`.
 5. Publish `@leadrails/sdk` BEFORE `@leadrails/next`. Otherwise
-   `@leadrails/next`'s pinned `^0.1.0` peer-dep range resolves to a
-   version that doesn't exist on the registry yet.
+   `@leadrails/next`'s peer-dep range resolves to a version that
+   doesn't exist on the registry yet.
+6. Validate the rc: install `@leadrails/sdk@<rc>` and
+   `@leadrails/next@<rc>` into a clean tmpdir and run a smoke
+   script. (Future: `pnpm smoke:rc` automating this.)
+7. **Only if the rc validates**: bump versions to `<x.y.z>` (drop
+   the `-rc.N`), repeat steps 3-4 without `--tag rc`. The stable
+   version becomes `latest`.
+8. If the rc fails: iterate the rc number, fix, retry. Do NOT
+   bump to a stable version until an rc has cleanly shipped.
+
+## JSR-specific facts that bit us
+
+Document these so the next contributor does not relearn:
+
+1. **JSR does NOT read `peerDependencies` for constraint resolution.**
+   When the SDK source has `import "@leadrails/sdk"`, JSR's publisher
+   resolves the version constraint by reading `dependencies` (and
+   falling back to `devDependencies`). `peerDependencies` is invisible
+   to this resolver. Consequence: a workspace package that ships an
+   adapter ONLY via `peerDependencies` will fail JSR publish with
+   `missingConstraint`. The fix is to ALSO list the cross-package dep
+   in `dependencies` with a literal range (`^0.1.2-rc.0`). The
+   `peerDependencies` entry remains for npm's peer-install semantics.
+2. **JSR's `--dry-run` does not validate constraint resolution.** A
+   `--dry-run` that succeeds can be followed by a real publish that
+   fails with `missingConstraint`. Trust only real (rc) publishes for
+   this class of failure.
+3. **The `workspace:` protocol is a pnpm convention, not a JSR one.**
+   `jsr publish` does NOT rewrite `workspace:*` / `workspace:^` /
+   `workspace:~` at publish time. Any of these in a published dep
+   field will either fail or produce a broken manifest. Use literal
+   version ranges (`^0.1.2-rc.0`) instead. The
+   `scripts/check-workspace-deps.mjs` gate enforces this for the
+   `dependencies` / `peerDependencies` / `optionalDependencies`
+   fields; `devDependencies` is explicitly excluded — but if JSR
+   falls back to `devDependencies` to resolve a bare specifier (point
+   1 above), even `workspace:*` there will surface as
+   `missingConstraint`. Pragma: do not list a workspace package in
+   `devDependencies` if it is also a real runtime dep — put it in
+   `dependencies` with a real range and let pnpm link the workspace
+   copy via range satisfaction.
 
 ## README-as-test-contract
 
@@ -189,7 +268,8 @@ that break in plain Node ESM, which is how we shipped 0.1.0.
 
 | Symptom | Likely cause |
 |---|---|
-| `missingConstraint` on JSR | `workspace:*` somewhere in `dependencies`. See rule above. |
+| `missingConstraint` on JSR (and `--dry-run` passed) | The bare specifier resolves only via `peerDependencies`, which JSR does not read. Also list the dep in `dependencies` with a literal range. See "JSR-specific facts that bit us" above. |
+| `missingConstraint` on JSR (workspace protocol) | `workspace:*` / `workspace:^` / `workspace:~` in a published dep field, OR in `devDependencies` for a package JSR falls back to. Use literal version ranges. |
 | `EPUBLISHCONFLICT` on npm | The version on `package.json` already exists on the registry. Bump and retry. |
 | `slow-types` errors on JSR | A public export has an inferred (not annotated) return type. Annotate explicitly. |
 | `@leadrails/next` install fails for users with "no matching version" | You published `@leadrails/next` before `@leadrails/sdk`. Publish SDK first. |
