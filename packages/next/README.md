@@ -72,7 +72,7 @@ export default function ContactPage() {
 
 ## Lint preset (ESLint)
 
-The SDK has four build/runtime guardrails to keep the signing secret server-side. The optional ESLint preset is a fifth layer that catches misuse in your editor before you even build.
+`@leadrails/sdk` ships three runtime/build guardrails (browser-stub exports, runtime `typeof window` check, and an independent `NEXT_PUBLIC_*` refusal); `@leadrails/next` adds a fourth (`import "server-only"`) that fires inside Next.js Server Component bundles. The optional ESLint preset is a fifth layer that catches misuse in your editor before you even build.
 
 ```js
 // eslint.config.js

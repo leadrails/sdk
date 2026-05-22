@@ -19,5 +19,13 @@ jobs:
           node-version: "22"
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
+      - run: pnpm check:workspace-deps
       - run: pnpm typecheck
+      - run: pnpm test
       - run: pnpm -r build
+      # Pack the SDK into a tarball, install it into a clean tmpdir,
+      # and import it in plain Node ESM. Validates the PUBLISHED
+      # artifact, not just source — catches extension bugs, exports-
+      # map drift, and missing files in the tarball. See AGENTS.md →
+      # "README-as-test-contract".
+      - run: pnpm smoke

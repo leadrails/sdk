@@ -19,7 +19,7 @@
 
 | Package | What it is |
 |---|---|
-| [`@leadrails/sdk`](./packages/sdk) | Server-only core. Signs and POSTs lead events. Works in Node ≥18, Bun, Deno, Cloudflare Workers, Vercel Edge. |
+| [`@leadrails/sdk`](./packages/sdk) | Server-only core. Signs and POSTs lead events. Tested in Node ≥18; portable to Bun, Deno, Cloudflare Workers, Vercel Edge (additional CI gates added as customers adopt them). |
 | [`@leadrails/next`](./packages/next) | Next.js adapter — `createLeadEventRoute()` + `createLeadEventAction()` + lint preset that bans SDK imports outside server files. |
 
 ## Quick example
@@ -61,12 +61,17 @@ That's it. The SDK signs the request, sends it, and your event lands in LeadRail
 
 ## Server-only enforcement
 
-Four layers of guardrails to ensure the HMAC signing secret never reaches a browser bundle:
+Three layers ensure the HMAC signing secret never reaches a browser bundle, plus a separate guardrail against secrets being loaded from public-prefixed env vars:
 
-1. **`import "server-only"`** at the top of every `@leadrails/sdk` entry file. Next.js fails the build with a clear error if a client component transitively imports it.
-2. **`package.json` exports map** with `browser` → a stub that throws on import. Webpack / Vite / Rollup / esbuild all resolve to the throwing stub when bundling for the browser.
-3. **Runtime guard** at module load: throws if `typeof window !== "undefined"`.
-4. **`NEXT_PUBLIC_*` refusal** — `createClient()` throws if the signing secret value matches any env var whose name starts with `NEXT_PUBLIC_`.
+1. **`package.json` exports map** with `browser` → a stub that throws on import. Every modern bundler (webpack, vite, esbuild, turbopack, rollup) resolves the `browser` condition when targeting a browser, so a client bundle that transitively imports `@leadrails/sdk` fails at bundle time with a clear error.
+2. **Runtime guard** at module load: throws if `typeof window !== "undefined"`. Last-resort defense if a runtime somehow loads the non-browser entry from a browser context.
+3. **`@leadrails/next/lint/{eslint,oxlint}` preset** bans imports of `@leadrails/sdk` outside server-side file conventions (Route Handlers, Server Actions). Caught at lint-time, before bundle.
+
+Plus, independently:
+
+4. **`NEXT_PUBLIC_*` refusal** — `createClient()` throws if the signing secret value matches any env var whose name starts with `NEXT_PUBLIC_`. Even if a developer accidentally configures the secret as a public env var, the SDK refuses to use it.
+
+`@leadrails/next` additionally uses `import "server-only"` in each of its entry files, since that package is Next.js-specific and that marker adds value in that runtime. The SDK itself does NOT use `server-only` — its `react-server` condition would break every non-Next.js runtime the SDK supports.
 
 ## Status
 

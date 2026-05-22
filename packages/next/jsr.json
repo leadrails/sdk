@@ -1,16 +1,16 @@
 {
   "name": "@leadrails/next",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Next.js adapter for @leadrails/sdk. createLeadEventRoute + createLeadEventAction + lint preset.",
   "license": "MIT",
   "homepage": "https://leadrails.dev/?ref=jsr",
   "exports": {
     ".": "./src/index.ts",
-    "./lint/oxlint": "./src/lint/oxlint.js",
-    "./lint/eslint": "./src/lint/eslint.js"
+    "./lint/oxlint": "./src/lint/oxlint.ts",
+    "./lint/eslint": "./src/lint/eslint.ts"
   },
   "publish": {
-    "include": ["src/**/*.ts", "src/lint/**/*.js", "README.md", "LICENSE", "jsr.json"],
+    "include": ["src/**/*.ts", "README.md", "LICENSE", "jsr.json"],
     "exclude": ["src/**/*.test.ts"]
   }
 }

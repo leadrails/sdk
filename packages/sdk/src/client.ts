@@ -1,6 +1,6 @@
-import type { LeadEventV1 } from "./types";
-import { sendLeadEvent, type SendLeadEventConfig, type SendLeadEventResult } from "./send";
-import { LeadRailsConfigError } from "./errors";
+import type { LeadEventV1 } from "./types.js";
+import { sendLeadEvent, type SendLeadEventConfig, type SendLeadEventResult } from "./send.js";
+import { LeadRailsConfigError } from "./errors.js";
 
 export interface ClientOptions {
   clientId: string;

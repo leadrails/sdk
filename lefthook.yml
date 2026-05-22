@@ -1,0 +1,13 @@
+# Git hooks for leadrails-sdk.
+# Installed automatically on `pnpm install` via the root `prepare` script.
+# See https://github.com/evilmartians/lefthook for syntax.
+
+pre-push:
+  parallel: true
+  commands:
+    no-workspace-star:
+      run: node scripts/check-workspace-deps.mjs
+    typecheck:
+      run: pnpm typecheck
+    test:
+      run: pnpm test

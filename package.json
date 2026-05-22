@@ -11,10 +11,14 @@
     "build": "pnpm -r build",
     "clean": "pnpm -r clean",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "check:workspace-deps": "node scripts/check-workspace-deps.mjs",
+    "smoke": "node scripts/smoke-node-esm.mjs",
+    "prepare": "lefthook install"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
+    "lefthook": "^1.7.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.6"
   }

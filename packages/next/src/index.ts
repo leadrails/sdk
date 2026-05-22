@@ -3,7 +3,7 @@
 // marker module which Next.js fails-fast on at build time if any
 // client component transitively pulls it in.
 
-export { createLeadEventRoute } from "./route";
-export type { CreateLeadEventRouteOptions } from "./route";
-export { createLeadEventAction } from "./action";
-export type { CreateLeadEventActionOptions, LeadEventActionResult } from "./action";
+export { createLeadEventRoute } from "./route.js";
+export type { CreateLeadEventRouteOptions } from "./route.js";
+export { createLeadEventAction } from "./action.js";
+export type { CreateLeadEventActionOptions, LeadEventActionResult } from "./action.js";

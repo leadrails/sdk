@@ -6,7 +6,7 @@ import {
   type LeadEventV1Input,
   type SendLeadEventResult,
 } from "@leadrails/sdk";
-import { isApiError } from "./utils";
+import { isApiError } from "./utils.js";
 
 export interface CreateLeadEventRouteOptions extends Partial<ClientOptions> {
   /**

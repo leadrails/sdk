@@ -1,6 +1,6 @@
 # `@leadrails/sdk`
 
-Server-only SDK to send HMAC-signed lead events to [LeadRails](https://leadrails.dev/?ref=npm). Works in Node ≥18, Bun, Deno, Cloudflare Workers, Vercel Edge.
+Server-only SDK to send HMAC-signed lead events to [LeadRails](https://leadrails.dev/?ref=npm). Tested in Node ≥18 (CI runs a pack-and-load smoke against the published artifact); portable to Bun, Deno, Cloudflare Workers, and Vercel Edge — those runtimes will be added to CI as customers adopt them.
 
 ## Install
 

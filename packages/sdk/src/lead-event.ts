@@ -1,4 +1,4 @@
-import type { LeadEventV1, LeadEventV1Input } from "./types";
+import type { LeadEventV1, LeadEventV1Input } from "./types.js";
 
 /**
  * Build a LeadEventV1 from typed input. Pre-fills the constant

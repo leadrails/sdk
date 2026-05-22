@@ -10,12 +10,25 @@
 //   ];
 //
 // Same rule shape as the oxlint preset — bans @leadrails/sdk
-// imports outside Server-side file conventions. Acts as an
+// imports outside server-side file conventions. Acts as an
 // editor-level guardrail before the build-time `server-only`
 // marker and the package.json `browser` exports stub.
 
-/** @type {import("eslint").Linter.Config[]} */
-const config = [
+// Structural shape of an ESLint flat-config entry. Kept inline so
+// consumers don't need @types/eslint installed for our types to
+// resolve.
+export type ESLintRuleSeverity = "error" | "warn" | "off" | 0 | 1 | 2;
+export type ESLintRuleEntry =
+  | ESLintRuleSeverity
+  | [ESLintRuleSeverity, ...unknown[]];
+
+export interface ESLintFlatConfigEntry {
+  name?: string;
+  files?: string[];
+  rules?: Record<string, ESLintRuleEntry>;
+}
+
+const preset: ESLintFlatConfigEntry[] = [
   {
     name: "@leadrails/next/lint/server-only-sdk",
     files: ["**/*.{ts,tsx,js,jsx,mjs}"],
@@ -50,4 +63,4 @@ const config = [
   },
 ];
 
-export default config;
+export default preset;

@@ -14,7 +14,23 @@
 // client-component imports at lint-time, before the build-time
 // `server-only` marker fires.
 
-export default {
+// Structural shape of an oxlint config. oxlint doesn't publish
+// official TypeScript types, so we declare what consumers actually
+// need to see in their editor.
+export type OxlintRuleSeverity = "error" | "warn" | "off";
+export type OxlintRuleEntry =
+  | OxlintRuleSeverity
+  | [OxlintRuleSeverity, ...unknown[]];
+
+export interface OxlintPreset {
+  rules: Record<string, OxlintRuleEntry>;
+  overrides: Array<{
+    files: string[];
+    rules: Record<string, OxlintRuleEntry>;
+  }>;
+}
+
+const preset: OxlintPreset = {
   rules: {
     "no-restricted-imports": [
       "error",
@@ -45,3 +61,5 @@ export default {
     },
   ],
 };
+
+export default preset;

@@ -1,7 +1,7 @@
 {
   "name": "@leadrails/sdk",
-  "version": "0.1.0",
-  "description": "Server-only SDK to send HMAC-signed lead events to LeadRails. Works in Node, Bun, Deno, Cloudflare Workers, Vercel Edge.",
+  "version": "0.1.1",
+  "description": "Server-only SDK to send HMAC-signed lead events to LeadRails. Tested in Node ≥18; portable to Bun, Deno, Cloudflare Workers, Vercel Edge.",
   "license": "MIT",
   "homepage": "https://leadrails.dev/?ref=jsr",
   "exports": "./src/index.ts",

@@ -1,6 +1,6 @@
-import type { LeadEventV1 } from "./types";
-import { LeadRailsApiError, LeadRailsAuthError } from "./errors";
-import { sha256Hex, hmacSha256Base64, buildSignatureBaseString } from "./sign";
+import type { LeadEventV1 } from "./types.js";
+import { LeadRailsApiError, LeadRailsAuthError } from "./errors.js";
+import { sha256Hex, hmacSha256Base64, buildSignatureBaseString } from "./sign.js";
 
 export interface SendLeadEventConfig {
   clientId: string;

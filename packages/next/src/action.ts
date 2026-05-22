@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient, leadEvent, type ClientOptions, type LeadEventV1Input } from "@leadrails/sdk";
-import { isApiError } from "./utils";
+import { isApiError } from "./utils.js";
 
 export interface CreateLeadEventActionOptions extends Partial<ClientOptions> {
   /**

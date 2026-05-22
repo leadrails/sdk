@@ -1,7 +1,7 @@
 {
   "name": "@leadrails/sdk",
-  "version": "0.1.0",
-  "description": "Server-only SDK to send HMAC-signed lead events to LeadRails. Works in Node, Bun, Deno, Cloudflare Workers, Vercel Edge.",
+  "version": "0.1.1",
+  "description": "Server-only SDK to send HMAC-signed lead events to LeadRails. Tested in Node ≥18; portable to Bun, Deno, Cloudflare Workers, Vercel Edge.",
   "license": "MIT",
   "author": "Austin Lowther <dev@austin.lowther.me>",
   "homepage": "https://leadrails.dev/?ref=npm",
@@ -55,7 +55,5 @@
     "clean": "rm -rf dist",
     "test": "vitest run"
   },
-  "dependencies": {
-    "server-only": "^0.0.1"
-  }
+  "dependencies": {}
 }

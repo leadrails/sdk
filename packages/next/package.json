@@ -1,6 +1,6 @@
 {
   "name": "@leadrails/next",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Next.js adapter for @leadrails/sdk. createLeadEventRoute + createLeadEventAction + ESLint lint preset.",
   "license": "MIT",
   "author": "Austin Lowther <dev@austin.lowther.me>",
@@ -27,8 +27,8 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./lint/oxlint": "./src/lint/oxlint.js",
-    "./lint/eslint": "./src/lint/eslint.js"
+    "./lint/oxlint": "./src/lint/oxlint.ts",
+    "./lint/eslint": "./src/lint/eslint.ts"
   },
   "publishConfig": {
     "access": "public",
@@ -41,13 +41,18 @@
         "node": "./dist/index.js",
         "default": "./dist/index.js"
       },
-      "./lint/oxlint": "./src/lint/oxlint.js",
-      "./lint/eslint": "./src/lint/eslint.js"
+      "./lint/oxlint": {
+        "types": "./dist/lint/oxlint.d.ts",
+        "default": "./dist/lint/oxlint.js"
+      },
+      "./lint/eslint": {
+        "types": "./dist/lint/eslint.d.ts",
+        "default": "./dist/lint/eslint.js"
+      }
     }
   },
   "files": [
     "dist",
-    "src/lint",
     "README.md",
     "LICENSE"
   ],
@@ -56,7 +61,7 @@
     "clean": "rm -rf dist"
   },
   "peerDependencies": {
-    "@leadrails/sdk": "^0.1.0",
+    "@leadrails/sdk": "^0.1.1",
     "next": ">=13.4.0"
   },
   "peerDependenciesMeta": {
@@ -65,7 +70,9 @@
     }
   },
   "dependencies": {
-    "@leadrails/sdk": "workspace:*",
     "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@leadrails/sdk": "workspace:*"
   }
 }
