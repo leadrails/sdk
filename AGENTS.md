@@ -116,32 +116,58 @@ no staging environment exists:
    needed. Burning rc numbers is fine; burning stable version
    numbers is not.
 
-### The publish flow (canonical: CI workflow)
+### The publish flow (canonical: auto-publish on version bump)
 
 Publishes run from [`.github/workflows/publish.yml`](.github/workflows/publish.yml).
-Manual trigger via GitHub Actions UI, NOT from a developer laptop.
+**Auto-triggered** on any push to `main` that touches
+`packages/*/package.json` or `packages/*/jsr.json`. Manual
+`workflow_dispatch` stays available as an override for retries.
 
 1. Bump the version in `packages/<pkg>/package.json` AND
    `packages/<pkg>/jsr.json` to `<x.y.z>-rc.0` (the two must agree).
-   If `@leadrails/next` depends on `@leadrails/sdk`, bump
-   `peerDependencies` and `dependencies` ranges to the new version.
+   If `@leadrails/next` depends on `@leadrails/sdk`, bump both
+   `peerDependencies` and `dependencies` ranges to the new version
+   (exact pin, no caret — pre-release caret ranges are fragile in
+   pnpm; see "JSR-specific facts that bit us").
 2. Commit + push to `main`.
-3. Trigger the workflow: GitHub repo → Actions → "Publish package"
-   → "Run workflow" → pick `package: sdk|next`, `npm_tag: rc`.
-4. Workflow runs the full gate chain (check, typecheck, test, build,
-   smoke) THEN publishes to npm with `--provenance` AND to JSR via
-   OIDC. Provenance attestation appears on both pages.
-5. Publish `@leadrails/sdk` BEFORE `@leadrails/next`. The workflow
-   does not enforce order — you trigger the runs sequentially.
-6. Validate the rc: install `@leadrails/sdk@<rc>` and
+3. The workflow runs automatically: full gate chain (check,
+   typecheck, test, build, smoke), then asks the npm registry
+   whether each package's current version is new. For each version
+   not yet on npm, it publishes to BOTH npm (with `--provenance`)
+   and JSR (via OIDC). The npm dist-tag is auto-derived from the
+   version string — anything with `-` in it (`-rc.0`, `-beta.1`,
+   etc.) ships under `rc`; clean versions ship under `latest`.
+4. The workflow publishes `@leadrails/sdk` before `@leadrails/next`
+   in the same job, sequentially. next's peer dep is guaranteed
+   resolvable by the time next is published.
+5. Validate the rc: install `@leadrails/sdk@<rc>` and
    `@leadrails/next@<rc>` into a clean tmpdir and run a smoke
-   script. (Future: `pnpm smoke:rc` automating this.)
-7. **Only if the rc validates**: bump versions to `<x.y.z>` (drop
-   the `-rc.N`), commit, push, re-run the workflow with
-   `npm_tag: latest`. The stable version becomes `latest` on npm
-   and JSR's default version.
-8. If the rc fails: iterate the rc number, fix, retry. Do NOT
-   bump to a stable version until an rc has cleanly shipped.
+   script. (Future: `pnpm smoke:rc` automating this against the
+   `rc` dist-tag.)
+6. **Only if the rc validates**: bump versions to `<x.y.z>` (drop
+   the `-rc.N`), commit, push. The workflow auto-derives `latest`
+   from the clean version and the stable version becomes `latest`
+   on npm and JSR's default version.
+7. If the rc fails: iterate the rc number (`rc.1`, `rc.2`, ...),
+   fix, push. Each rc push auto-publishes. Do NOT bump to a stable
+   version until an rc has cleanly shipped.
+
+### Why auto-trigger is safe
+
+Three guards against accidental publishes:
+
+- **Paths filter**: the workflow only fires when a manifest changes.
+  A doc-only or test-only commit doesn't touch the workflow.
+- **Idempotent detection**: the workflow asks npm whether the
+  current version is already published. If yes, the publish step
+  no-ops. Re-firing the workflow on the same SHA never republishes.
+- **Gate chain runs first**: if any gate fails (check, typecheck,
+  test, build, smoke), the workflow aborts before either registry
+  sees a byte.
+
+The `concurrency: group: publish` block also ensures only one
+publish workflow runs at a time, so two rapid version-bump pushes
+queue rather than race.
 
 ### Repo-side setup required (one-time)
 

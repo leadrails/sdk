@@ -1,55 +1,46 @@
-name: Publish package
+name: Publish
 
-# Manual-trigger publish for either @leadrails/sdk or @leadrails/next
-# to BOTH npm and JSR. Runs the same gate chain as PR CI before
-# touching either registry. Provenance attestation is emitted for
-# npm; JSR OIDC requires the JSR package to be linked to this repo
-# at https://jsr.io/<package>/settings.
+# Auto-publish whenever a version bump lands on main. The paths
+# filter means doc/test/CI-only commits don't trigger; only changes
+# to a manifest do. The job itself then checks npm to see if the
+# current version is actually new — if it's already published, the
+# job no-ops. That makes the trigger safe to re-fire as needed.
 #
-# See AGENTS.md → "Publishing flow" + "JSR package quality scorecard"
-# for the human-side checklist and the deferred-vs-active rules.
+# Manual `workflow_dispatch` stays available as an override for
+# retries or for publishing rcs that already sit in the repo
+# without a fresh commit.
+#
+# See AGENTS.md → "Dry-run is a simulation, not reality" + "Publishing
+# flow" + "JSR package quality scorecard".
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/sdk/package.json"
+      - "packages/sdk/jsr.json"
+      - "packages/next/package.json"
+      - "packages/next/jsr.json"
   workflow_dispatch:
-    inputs:
-      package:
-        description: Which package to publish
-        required: true
-        type: choice
-        options:
-          - sdk
-          - next
-      npm_tag:
-        description: npm dist-tag — "rc" for pre-releases (keeps `latest` unchanged), "latest" only for promote-to-stable
-        required: true
-        type: choice
-        default: rc
-        options:
-          - rc
-          - latest
 
 permissions:
-  # Default to read-only; the publish job opts into id-token: write.
   contents: read
 
-# Prevent two simultaneous dispatches of the same package from racing.
-# A second dispatch while one is in flight will queue (not cancel),
-# so we don't lose work and the registry state stays consistent.
+# Only one publish workflow can run at a time across the whole repo.
+# A second push while one is in flight waits (does not cancel) so
+# nothing is lost and registry state stays consistent.
 concurrency:
-  group: publish-${{ inputs.package }}
+  group: publish
   cancel-in-progress: false
 
 jobs:
   publish:
     runs-on: ubuntu-latest
-    # GitHub Environment named "publish". Configure in repo Settings →
-    # Environments → New environment to gate with required reviewers,
-    # branch restrictions, or wait timers. Optional today; recommended
-    # before the first paying customer.
+    # GitHub Environment named "publish". Add required reviewers /
+    # branch restrictions / wait timers in repo Settings → Environments
+    # without touching this file.
     environment: publish
     permissions:
-      # Required for both npm provenance attestation AND JSR's OIDC
-      # auth. Scoped to this job only.
       contents: read
       id-token: write
     steps:
@@ -67,9 +58,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # Same gate chain as PR CI. A failure here aborts before
-      # anything reaches a registry.
-      - name: Workspace-deps check (no `workspace:` in published deps)
+      # Full gate chain — same as ci.yml. Any failure aborts the
+      # workflow before either registry sees a byte.
+      - name: Workspace-deps check
         run: pnpm check:workspace-deps
       - name: Typecheck
         run: pnpm typecheck
@@ -77,34 +68,96 @@ jobs:
         run: pnpm test
       - name: Build
         run: pnpm -r build
-      - name: Smoke — pack + import in plain Node ESM
+      - name: Smoke (pack + import in plain Node ESM)
         run: pnpm smoke
 
-      - name: Resolve publish target
-        id: target
-        working-directory: packages/${{ inputs.package }}
+      # Detect which packages need publishing. A version is "new" iff
+      # it doesn't already exist on the npm registry. The dist-tag is
+      # derived from the version string itself: anything with a `-`
+      # is a prerelease.
+      - id: sdk
+        name: Detect @leadrails/sdk publish state
         run: |
-          NAME=$(jq -r .name package.json)
-          VERSION=$(jq -r .version package.json)
-          echo "name=$NAME"       >> "$GITHUB_OUTPUT"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "::notice title=Publishing::$NAME@$VERSION → npm dist-tag '${{ inputs.npm_tag }}' + JSR"
+          VERSION=$(jq -r .version packages/sdk/package.json)
+          EXISTS=$(curl -fsSL "https://registry.npmjs.org/@leadrails/sdk/$VERSION" 2>/dev/null | jq -r '.version // empty')
+          if [ "$EXISTS" = "$VERSION" ]; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::@leadrails/sdk@$VERSION already on npm — skipping"
+          else
+            echo "publish=true"         >> "$GITHUB_OUTPUT"
+            echo "version=$VERSION"     >> "$GITHUB_OUTPUT"
+            if [[ "$VERSION" == *-* ]]; then
+              echo "tag=rc"             >> "$GITHUB_OUTPUT"
+            else
+              echo "tag=latest"         >> "$GITHUB_OUTPUT"
+            fi
+            echo "::notice::@leadrails/sdk@$VERSION queued for publish"
+          fi
 
-      - name: Publish to npm (with provenance)
-        working-directory: packages/${{ inputs.package }}
+      - id: next
+        name: Detect @leadrails/next publish state
+        run: |
+          VERSION=$(jq -r .version packages/next/package.json)
+          EXISTS=$(curl -fsSL "https://registry.npmjs.org/@leadrails/next/$VERSION" 2>/dev/null | jq -r '.version // empty')
+          if [ "$EXISTS" = "$VERSION" ]; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::@leadrails/next@$VERSION already on npm — skipping"
+          else
+            echo "publish=true"         >> "$GITHUB_OUTPUT"
+            echo "version=$VERSION"     >> "$GITHUB_OUTPUT"
+            if [[ "$VERSION" == *-* ]]; then
+              echo "tag=rc"             >> "$GITHUB_OUTPUT"
+            else
+              echo "tag=latest"         >> "$GITHUB_OUTPUT"
+            fi
+            echo "::notice::@leadrails/next@$VERSION queued for publish"
+          fi
+
+      # sdk first — next's peer dep must resolve to a registry version.
+      - name: Publish @leadrails/sdk to npm
+        if: steps.sdk.outputs.publish == 'true'
+        working-directory: packages/sdk
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: pnpm publish --access public --provenance --tag ${{ inputs.npm_tag }} --no-git-checks
+        run: pnpm publish --access public --provenance --tag ${{ steps.sdk.outputs.tag }} --no-git-checks
 
-      - name: Publish to JSR (OIDC)
-        working-directory: packages/${{ inputs.package }}
+      - name: Publish @leadrails/sdk to JSR
+        if: steps.sdk.outputs.publish == 'true'
+        working-directory: packages/sdk
         run: pnpm dlx jsr publish
 
-      - name: Post-publish summary
+      # next second.
+      - name: Publish @leadrails/next to npm
+        if: steps.next.outputs.publish == 'true'
+        working-directory: packages/next
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: pnpm publish --access public --provenance --tag ${{ steps.next.outputs.tag }} --no-git-checks
+
+      - name: Publish @leadrails/next to JSR
+        if: steps.next.outputs.publish == 'true'
+        working-directory: packages/next
+        run: pnpm dlx jsr publish
+
+      - name: Summary
+        if: always()
         run: |
-          echo "### Published" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **${{ steps.target.outputs.name }}@${{ steps.target.outputs.version }}**" >> "$GITHUB_STEP_SUMMARY"
-          echo "- npm dist-tag: \`${{ inputs.npm_tag }}\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- [npm](https://www.npmjs.com/package/${{ steps.target.outputs.name }})" >> "$GITHUB_STEP_SUMMARY"
-          echo "- [JSR](https://jsr.io/${{ steps.target.outputs.name }})" >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "### Publish summary"
+            echo ""
+            if [ "${{ steps.sdk.outputs.publish }}" = "true" ]; then
+              echo "- ✓ Published **@leadrails/sdk@${{ steps.sdk.outputs.version }}** (npm tag: \`${{ steps.sdk.outputs.tag }}\`)"
+            else
+              echo "- @leadrails/sdk: no change (already on npm)"
+            fi
+            if [ "${{ steps.next.outputs.publish }}" = "true" ]; then
+              echo "- ✓ Published **@leadrails/next@${{ steps.next.outputs.version }}** (npm tag: \`${{ steps.next.outputs.tag }}\`)"
+            else
+              echo "- @leadrails/next: no change (already on npm)"
+            fi
+            echo ""
+            echo "- [npm @leadrails/sdk](https://www.npmjs.com/package/@leadrails/sdk)"
+            echo "- [npm @leadrails/next](https://www.npmjs.com/package/@leadrails/next)"
+            echo "- [JSR @leadrails/sdk](https://jsr.io/@leadrails/sdk)"
+            echo "- [JSR @leadrails/next](https://jsr.io/@leadrails/next)"
+          } >> "$GITHUB_STEP_SUMMARY"
