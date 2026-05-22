@@ -8,6 +8,14 @@ import {
 } from "@leadrails/sdk";
 import { isApiError } from "./utils.js";
 
+/**
+ * Options for `createLeadEventRoute()`. Extends `ClientOptions`
+ * (every credential / observability field from the SDK is
+ * forwarded), plus three optional Next.js-specific hooks:
+ * `mapRequest` to transform incoming JSON before signing,
+ * `formatSuccessResponse` / `formatErrorResponse` to customize the
+ * outbound HTTP envelope.
+ */
 export interface CreateLeadEventRouteOptions extends Partial<ClientOptions> {
   /**
    * Override the default request → LeadEventV1Input mapping. By

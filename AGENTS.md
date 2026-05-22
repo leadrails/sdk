@@ -214,6 +214,51 @@ Pre-paying-customers, these are honest aspirations rather than
 load-bearing claims. If a customer adopts the SDK in one of these
 runtimes, ADD THE GATE BEFORE THE NEXT RELEASE.
 
+## JSR package quality scorecard
+
+JSR scores every published package on these criteria and displays
+the result publicly. We treat the full scorecard as a publish-
+readiness gate — every box should be green (or yellow with an
+explicit, justified reason) before we publish a new version.
+
+| Criterion | How we satisfy it | Where it's enforced |
+|---|---|---|
+| README in repo root or module doc | `README.md` at repo root + per-package `README.md`. | File presence (manual). |
+| Examples in README | "Quick example" / "Usage" code blocks. | Manual review. |
+| Module docs in every entrypoint | Top-of-file comment in each entry `.ts`. | Manual review. |
+| ≥80% of exports documented (`/** ... */`) | Every `export` should have a TSDoc comment, including type-only exports. Interface-level docs are required even when members are individually documented — JSR's counter sees the interface as a separate symbol. | Manual review (TODO: lint rule). |
+| No slow types | Annotate return types explicitly; avoid relying on TS inference at API boundaries. | `jsr publish --dry-run` (runs `deno doc` fast-check). |
+| Has a package description | Set in the JSR package settings web UI: `https://jsr.io/<pkg>/settings`. NOT the same as `jsr.json` `description` — JSR's search uses the settings value. | Web UI (manual). |
+| ≥1 runtime marked compatible | JSR package settings → "Runtime compatibility" toggles. Only mark runtimes we have a gate for. Today: Node ≥18 (via `pnpm smoke`). | Web UI (manual). |
+| ≥2 runtimes marked compatible | Same place. Add the next runtime when we add the smoke gate for it (Bun → `bun smoke.mjs`; Deno → `deno run`; Workers → `wrangler dev`). | Web UI (manual) + new smoke jobs in `.github/workflows/ci.yml`. |
+| Provenance | Publish from a GitHub Actions workflow with OIDC. JSR records the workflow run; consumers can verify the package came from the claimed commit. | `.github/workflows/publish.yml` (TODO — see "Provenance setup" below). |
+
+### Pre-publish checklist (run before every `pnpm publish` / `jsr publish`)
+
+1. `pnpm typecheck && pnpm test && pnpm smoke` — local gates green.
+2. Every new export has a TSDoc comment (`/** ... */`). Interface-level
+   docs included, even when individual members are documented.
+3. `pnpm dlx jsr publish --dry-run` from each package — slow-types
+   advisory (necessary, not sufficient — see "Dry-run is a simulation").
+4. After publishing an rc and validating, check the JSR package page
+   for both packages and confirm the scorecard didn't regress.
+
+### Provenance setup (deferred but tracked)
+
+To unlock the "Has provenance" check, we need to publish from CI
+rather than from a developer laptop:
+
+- GitHub Actions workflow (`.github/workflows/publish.yml`) triggered
+  on a release tag.
+- `permissions: id-token: write` so the workflow can mint an OIDC
+  token JSR and npm both trust.
+- `npm publish --provenance --access public` (npm side).
+- `npx jsr publish` (JSR auto-detects OIDC when run inside Actions).
+
+Until that workflow exists, publishes from local machines will
+always show "Has provenance: ✗" on the scorecard. That's a known
+deferred item.
+
 ## Server-side enforcement
 
 Three layers. None of them are `server-only` (we removed it from

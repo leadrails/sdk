@@ -36,6 +36,11 @@ export interface LeadEventV1 {
   submitted_at: string;
 }
 
+/**
+ * Where the event came from — the integration / form / system that
+ * captured the lead. `source_system` is required; everything else
+ * is metadata used by LeadRails for routing and audit attribution.
+ */
 export interface SourceV1 {
   /**
    * Identifier for the system that generated this event (e.g.
@@ -44,24 +49,48 @@ export interface SourceV1 {
    * server-side with HTTP 422 `schema_validation_failed`.
    */
   source_system: string;
+  /** Optional upstream event ID — useful for cross-system tracing and dedup. */
   source_event_id?: string;
+  /** URL of the page the lead submitted from. */
   site_url?: string;
+  /** Form identifier within the source system. */
   form_id?: string;
+  /** Human-readable form name. */
   form_name?: string;
 }
 
+/**
+ * The actual person behind the lead. All fields are optional and
+ * nullable on the wire — different sources capture different
+ * subsets (e.g. a name-only feedback form vs. a full intake form).
+ * LeadRails handles enrichment and de-duplication downstream.
+ */
 export interface LeadV1 {
+  /** Full name as a single string. Prefer this when the source doesn't split given/family names. */
   full_name?: string | null;
+  /** Given/first name. */
   first_name?: string | null;
+  /** Family/last name. */
   last_name?: string | null;
+  /** Email address. */
   email?: string | null;
+  /** Phone number in any format — LeadRails normalizes server-side. */
   phone?: string | null;
+  /** Free-form message / inquiry text from the lead. */
   message?: string | null;
+  /** Domain-specific category (e.g. `"plumbing"`, `"sales-demo"`). */
   service_type?: string | null;
+  /** Free-form urgency indicator (e.g. `"emergency"`, `"this-week"`). */
   urgency?: string | null;
+  /** Preferred channel back to the lead (e.g. `"phone"`, `"email"`, `"sms"`). */
   preferred_contact_method?: string | null;
 }
 
+/**
+ * Physical location of the lead. All fields are optional and
+ * nullable; LeadRails geocodes / normalizes server-side when
+ * routing rules need it.
+ */
 export interface LocationV1 {
   address_line1?: string | null;
   address_line2?: string | null;
@@ -71,24 +100,44 @@ export interface LocationV1 {
   country?: string | null;
 }
 
+/**
+ * Marketing attribution — where the lead came from before they
+ * reached the form. Standard UTM parameters plus click-IDs from the
+ * major ad platforms. LeadRails uses these for ROI reporting.
+ */
 export interface AttributionV1 {
+  /** URL of the landing page the lead first visited in this session. */
   landing_page?: string | null;
+  /** HTTP `Referer` header. */
   referrer?: string | null;
   utm_source?: string | null;
   utm_medium?: string | null;
   utm_campaign?: string | null;
   utm_term?: string | null;
   utm_content?: string | null;
+  /** Google Ads click ID. */
   gclid?: string | null;
+  /** Google Ads enhanced conversions identifier (mobile app). */
   gbraid?: string | null;
+  /** Google Ads enhanced conversions identifier (web). */
   wbraid?: string | null;
+  /** Microsoft Advertising click ID. */
   msclkid?: string | null;
+  /** Meta (Facebook/Instagram) click ID. */
   fbclid?: string | null;
 }
 
+/**
+ * Lead-provided consent flags. Important for TCPA / GDPR / CCPA
+ * compliance — LeadRails records these alongside the lead and can
+ * route based on consent status.
+ */
 export interface ConsentV1 {
+  /** Did the lead explicitly consent to SMS messaging? */
   sms_consent?: boolean;
+  /** Did the lead explicitly consent to marketing email? */
   email_consent?: boolean;
+  /** URL of the privacy policy the lead accepted, if any. */
   privacy_policy_url?: string | null;
 }
 

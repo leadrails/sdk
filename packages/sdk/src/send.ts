@@ -2,11 +2,22 @@ import type { LeadEventV1 } from "./types.js";
 import { LeadRailsApiError, LeadRailsAuthError } from "./errors.js";
 import { sha256Hex, hmacSha256Base64, buildSignatureBaseString } from "./sign.js";
 
+/**
+ * Per-call configuration for `sendLeadEvent()`. Most consumers
+ * should use `createClient()` instead — it captures the four
+ * credential fields once and exposes a `.send(event)` method. Pass
+ * this directly only when you need fully ad-hoc behavior.
+ */
 export interface SendLeadEventConfig {
+  /** LeadRails client identifier (`cli_...`). */
   clientId: string;
+  /** LeadRails source identifier (`src_...`). */
   sourceId: string;
+  /** Signing key identifier (`key_...`). */
   keyId: string;
+  /** HMAC signing secret (server-only). */
   signingSecret: string;
+  /** Override the intake endpoint. Defaults to `https://intake.leadrails.dev`. */
   apiUrl?: string;
   /**
    * Override the X-LR-Idempotency-Key. Default is
@@ -33,10 +44,19 @@ export interface SendLeadEventConfig {
   onError?: (err: Error) => void;
 }
 
+/**
+ * The successful result of a `sendLeadEvent()` / `client.send()`
+ * call. Non-2xx responses throw `LeadRailsApiError` /
+ * `LeadRailsAuthError` rather than returning a result.
+ */
 export interface SendLeadEventResult {
+  /** Unique LeadRails event id (`evt_...`). */
   event_id: string;
+  /** `"accepted"` for a fresh event; `"already_accepted"` if idempotency dedup hit. */
   status: "accepted" | "already_accepted";
+  /** Number of downstream delivery jobs the event will fan out to. */
   delivery_job_count: number;
+  /** Name of the LeadRails workflow that matched this event. */
   workflow: string;
   /** The X-Request-Id echoed by intake (when present). */
   requestId: string | null;

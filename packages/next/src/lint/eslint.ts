@@ -14,17 +14,34 @@
 // editor-level guardrail before the build-time `server-only`
 // marker and the package.json `browser` exports stub.
 
-// Structural shape of an ESLint flat-config entry. Kept inline so
-// consumers don't need @types/eslint installed for our types to
-// resolve.
+/**
+ * Severity level for an ESLint rule. ESLint accepts both string and
+ * numeric forms, so we type both.
+ */
 export type ESLintRuleSeverity = "error" | "warn" | "off" | 0 | 1 | 2;
+
+/**
+ * An ESLint rule entry. Either a bare severity (`"error"`) or a
+ * tuple of `[severity, ...options]` where the options are
+ * rule-specific.
+ */
 export type ESLintRuleEntry =
   | ESLintRuleSeverity
   | [ESLintRuleSeverity, ...unknown[]];
 
+/**
+ * Structural shape of one entry in an ESLint flat-config array.
+ * Kept inline so consumers don't need `@types/eslint` installed for
+ * our types to resolve. The default export of
+ * `@leadrails/next/lint/eslint` is `ESLintFlatConfigEntry[]` — spread
+ * it into your `eslint.config.js`.
+ */
 export interface ESLintFlatConfigEntry {
+  /** Optional human-readable name for the config entry. */
   name?: string;
+  /** Glob patterns this entry applies to. Defaults to everything if omitted. */
   files?: string[];
+  /** Rule severity / options keyed by rule name. */
   rules?: Record<string, ESLintRuleEntry>;
 }
 

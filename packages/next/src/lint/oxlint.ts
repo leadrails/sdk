@@ -14,16 +14,30 @@
 // client-component imports at lint-time, before the build-time
 // `server-only` marker fires.
 
-// Structural shape of an oxlint config. oxlint doesn't publish
-// official TypeScript types, so we declare what consumers actually
-// need to see in their editor.
+/**
+ * Severity level for an oxlint rule. Matches the `"error" | "warn" | "off"`
+ * convention shared by ESLint and oxlint.
+ */
 export type OxlintRuleSeverity = "error" | "warn" | "off";
+
+/**
+ * An oxlint rule entry. Either a bare severity (`"error"`) or a tuple
+ * of `[severity, ...options]` where the options are rule-specific.
+ */
 export type OxlintRuleEntry =
   | OxlintRuleSeverity
   | [OxlintRuleSeverity, ...unknown[]];
 
+/**
+ * Structural shape of an oxlint preset. oxlint doesn't ship official
+ * TypeScript types, so we declare what consumers need inline. Spread
+ * the default export of `@leadrails/next/lint/oxlint` into your
+ * `.oxlintrc.json` to inherit the bans.
+ */
 export interface OxlintPreset {
+  /** Top-level rules — apply everywhere unless overridden. */
   rules: Record<string, OxlintRuleEntry>;
+  /** Per-glob overrides — typically used to re-enable the SDK in server-only files. */
   overrides: Array<{
     files: string[];
     rules: Record<string, OxlintRuleEntry>;

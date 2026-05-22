@@ -2,6 +2,12 @@ import "server-only";
 import { createClient, leadEvent, type ClientOptions, type LeadEventV1Input } from "@leadrails/sdk";
 import { isApiError } from "./utils.js";
 
+/**
+ * Options for `createLeadEventAction()`. Extends `ClientOptions`
+ * (every credential / observability field from the SDK is
+ * forwarded), plus the required `mapFormData` transform that turns
+ * a Server Action's `FormData` into a `LeadEventV1Input`.
+ */
 export interface CreateLeadEventActionOptions extends Partial<ClientOptions> {
   /**
    * Convert a FormData submission into a LeadEventV1Input. Called
@@ -10,10 +16,22 @@ export interface CreateLeadEventActionOptions extends Partial<ClientOptions> {
   mapFormData: (formData: FormData) => LeadEventV1Input | Promise<LeadEventV1Input>;
 }
 
+/**
+ * Return value of a `createLeadEventAction()`-generated Server
+ * Action. On success: `{ ok: true, event_id }`. On a known LeadRails
+ * API error: `{ ok: false, error: errorCode, status }`. On any other
+ * thrown error: `{ ok: false, error: "internal_error", status: 500 }`
+ * (detail intentionally suppressed — see `formatErrorResponse` on
+ * the Route Handler variant if you need richer error envelopes).
+ */
 export interface LeadEventActionResult {
+  /** `true` if the event was accepted upstream. */
   ok: boolean;
+  /** LeadRails event id (`evt_...`), present on success. */
   event_id?: string;
+  /** Stable error code (`auth_failed`, `schema_validation_failed`, ...), present on failure. */
   error?: string;
+  /** Upstream HTTP status that produced the error, present on failure. */
   status?: number;
 }
 
