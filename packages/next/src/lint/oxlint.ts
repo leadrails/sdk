@@ -1,18 +1,21 @@
-// oxlint config preset for @leadrails/next consumers.
-//
-// Drop into your project's .oxlintrc.json `extends` (when oxlint
-// supports preset extension), or copy the rule + overrides into
-// your config:
-//
-//   import preset from "@leadrails/next/lint/oxlint";
-//   // ...merge preset into your .oxlintrc.json
-//
-// The rule bans @leadrails/sdk imports from any file that isn't a
-// Next.js Route Handler, a *.route.ts/tsx file, or a file in
-// actions.{ts,tsx} / actions/** / *.action.{ts,tsx} (the
-// conventional Server Action homes). This catches accidental
-// client-component imports at lint-time, before the build-time
-// `server-only` marker fires.
+/**
+ * @module
+ *
+ * oxlint config preset for `@leadrails/next` consumers. The default
+ * export ({@link OxlintPreset}) bans `@leadrails/sdk` imports from
+ * any file that isn't a conventional server-side location (Route
+ * Handlers, Server Actions, `*.route.{ts,tsx}`, `actions/**`).
+ *
+ * Catches accidental client-component imports of the SDK at
+ * lint-time — earlier than the build-time `server-only` marker or
+ * the `browser` exports stub.
+ *
+ * @example
+ * ```ts
+ * import preset from "@leadrails/next/lint/oxlint";
+ * // ...merge preset.rules + preset.overrides into your .oxlintrc.json
+ * ```
+ */
 
 /**
  * Severity level for an oxlint rule. Matches the `"error" | "warn" | "off"`

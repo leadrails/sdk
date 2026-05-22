@@ -32,6 +32,13 @@ permissions:
   # Default to read-only; the publish job opts into id-token: write.
   contents: read
 
+# Prevent two simultaneous dispatches of the same package from racing.
+# A second dispatch while one is in flight will queue (not cancel),
+# so we don't lose work and the registry state stays consistent.
+concurrency:
+  group: publish-${{ inputs.package }}
+  cancel-in-progress: false
+
 jobs:
   publish:
     runs-on: ubuntu-latest

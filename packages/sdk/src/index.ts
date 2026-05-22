@@ -1,21 +1,42 @@
-// Server-side enforcement. Three layers:
-//
-// 1. package.json `exports` map: the `browser` condition resolves to
-//    a throwing stub (`./dist/browser-stub.js`). Every modern bundler
-//    (webpack, vite, esbuild, turbopack, rollup) honors this, so a
-//    browser bundle that transitively imports this package fails at
-//    bundle time with a clear error.
-// 2. Runtime guard below: if a runtime somehow loads the non-browser
-//    entry from a browser context, throw on module init.
-// 3. `@leadrails/next/lint/{eslint,oxlint}` preset bans imports of
-//    this package outside server-side file conventions (Route
-//    Handlers, Server Actions). Caught at lint-time, before bundle.
-//
-// We deliberately do NOT use `import "server-only"` here: that
-// package's marker throws unless the `react-server` resolve
-// condition is set, which excludes Node ESM scripts, Bun, Deno,
-// Cloudflare Workers, and Vercel Edge — all environments this SDK
-// explicitly supports.
+/**
+ * @module
+ *
+ * Server-only SDK to send HMAC-signed lead events to LeadRails.
+ *
+ * Exposes {@link createClient} for the common case (auto-reads
+ * `LEADRAILS_*` env vars), {@link sendLeadEvent} for ad-hoc per-call
+ * config, {@link leadEvent} as a typed factory that pre-fills the
+ * wire-contract constants, and structured error classes
+ * ({@link LeadRailsApiError}, {@link LeadRailsAuthError},
+ * {@link LeadRailsConfigError}) for branching in catch blocks.
+ *
+ * ## Server-side enforcement (three layers)
+ *
+ * 1. `package.json` `exports.browser` resolves to a throwing stub;
+ *    every modern bundler routes browser bundles there and fails the
+ *    build with a clear error.
+ * 2. Runtime `typeof window` guard below — last-resort defense if a
+ *    runtime somehow loads the non-browser entry in a browser context.
+ * 3. `@leadrails/next/lint/{eslint,oxlint}` preset bans imports of
+ *    this package outside server-side file conventions.
+ *
+ * This module deliberately does NOT use `import "server-only"` —
+ * that package's `react-server` resolve condition throws outside
+ * Next.js Server Components, breaking Node ESM scripts, Bun, Deno,
+ * Cloudflare Workers, and Vercel Edge.
+ *
+ * @example
+ * ```ts
+ * import { createClient, leadEvent } from "@leadrails/sdk";
+ *
+ * const client = createClient(); // reads LEADRAILS_* from process.env
+ * await client.send(leadEvent({
+ *   source: { source_system: "my-app" },
+ *   lead:   { email: "x@example.com" },
+ * }));
+ * ```
+ */
+
 if (typeof window !== "undefined") {
   throw new Error(
     "@leadrails/sdk loaded in a browser environment. " +

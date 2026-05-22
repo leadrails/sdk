@@ -1,6 +1,6 @@
 {
   "name": "@leadrails/next",
-  "version": "0.1.2",
+  "version": "0.1.3-rc.0",
   "description": "Next.js adapter for @leadrails/sdk. createLeadEventRoute + createLeadEventAction + lint preset.",
   "license": "MIT",
   "homepage": "https://leadrails.dev/?ref=jsr",

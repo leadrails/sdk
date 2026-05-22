@@ -1,18 +1,27 @@
-// ESLint flat-config preset for @leadrails/next consumers.
-//
-// Usage in your eslint.config.js:
-//
-//   import leadrailsNext from "@leadrails/next/lint/eslint";
-//
-//   export default [
-//     ...leadrailsNext,
-//     // your other configs
-//   ];
-//
-// Same rule shape as the oxlint preset — bans @leadrails/sdk
-// imports outside server-side file conventions. Acts as an
-// editor-level guardrail before the build-time `server-only`
-// marker and the package.json `browser` exports stub.
+/**
+ * @module
+ *
+ * ESLint flat-config preset for `@leadrails/next` consumers. The
+ * default export is an `ESLintFlatConfigEntry[]` that bans
+ * `@leadrails/sdk` imports outside conventional server-side file
+ * locations (Route Handlers, Server Actions, `*.route.{ts,tsx}`,
+ * `actions/**`).
+ *
+ * Editor-level guardrail that fires before the build-time
+ * `server-only` marker and the `browser` exports stub catch the
+ * same problem.
+ *
+ * @example
+ * ```ts
+ * // eslint.config.js
+ * import leadrailsNext from "@leadrails/next/lint/eslint";
+ *
+ * export default [
+ *   ...leadrailsNext,
+ *   // ...your other configs
+ * ];
+ * ```
+ */
 
 /**
  * Severity level for an ESLint rule. ESLint accepts both string and
