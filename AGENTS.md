@@ -116,28 +116,67 @@ no staging environment exists:
    needed. Burning rc numbers is fine; burning stable version
    numbers is not.
 
-### The publish flow
+### The publish flow (canonical: CI workflow)
+
+Publishes run from [`.github/workflows/publish.yml`](.github/workflows/publish.yml).
+Manual trigger via GitHub Actions UI, NOT from a developer laptop.
 
 1. Bump the version in `packages/<pkg>/package.json` AND
    `packages/<pkg>/jsr.json` to `<x.y.z>-rc.0` (the two must agree).
-   If the next-package depends on the sdk-package, bump
-   `peerDependencies` and `dependencies` ranges to `^<x.y.z>-rc.0`.
-2. `pnpm -r build` from the repo root — produces the `dist/`
-   artifacts that npm consumers ship from.
-3. npm: `cd packages/<pkg> && pnpm publish --tag rc --access public`.
-   The `--tag rc` ensures the rc version does NOT become `latest`.
-4. JSR: `cd packages/<pkg> && pnpm dlx jsr publish`.
-5. Publish `@leadrails/sdk` BEFORE `@leadrails/next`. Otherwise
-   `@leadrails/next`'s peer-dep range resolves to a version that
-   doesn't exist on the registry yet.
+   If `@leadrails/next` depends on `@leadrails/sdk`, bump
+   `peerDependencies` and `dependencies` ranges to the new version.
+2. Commit + push to `main`.
+3. Trigger the workflow: GitHub repo → Actions → "Publish package"
+   → "Run workflow" → pick `package: sdk|next`, `npm_tag: rc`.
+4. Workflow runs the full gate chain (check, typecheck, test, build,
+   smoke) THEN publishes to npm with `--provenance` AND to JSR via
+   OIDC. Provenance attestation appears on both pages.
+5. Publish `@leadrails/sdk` BEFORE `@leadrails/next`. The workflow
+   does not enforce order — you trigger the runs sequentially.
 6. Validate the rc: install `@leadrails/sdk@<rc>` and
    `@leadrails/next@<rc>` into a clean tmpdir and run a smoke
    script. (Future: `pnpm smoke:rc` automating this.)
 7. **Only if the rc validates**: bump versions to `<x.y.z>` (drop
-   the `-rc.N`), repeat steps 3-4 without `--tag rc`. The stable
-   version becomes `latest`.
+   the `-rc.N`), commit, push, re-run the workflow with
+   `npm_tag: latest`. The stable version becomes `latest` on npm
+   and JSR's default version.
 8. If the rc fails: iterate the rc number, fix, retry. Do NOT
    bump to a stable version until an rc has cleanly shipped.
+
+### Repo-side setup required (one-time)
+
+The CI publish workflow requires three things configured outside
+the repo. Each is a one-time setup:
+
+1. **`NPM_TOKEN` repository secret** in GitHub → Settings → Secrets
+   and variables → Actions → "New repository secret". Token must be
+   a granular access token with publish permission on the
+   `@leadrails/*` scope. "Bypass 2FA" toggle is optional — npm
+   provenance works either way — but turning it on simplifies CI.
+2. **JSR repository linkage** at https://jsr.io/@leadrails/sdk/settings
+   and https://jsr.io/@leadrails/next/settings → "Link a GitHub
+   repository" → select `leadrails/sdk`. Without this, JSR rejects
+   the OIDC token from GitHub Actions.
+3. **GitHub Environment named `publish`** (optional but recommended):
+   Settings → Environments → New environment → name it `publish`.
+   Add required reviewers / wait timers / branch restrictions here
+   when the team grows. Today it's a no-op gate the workflow
+   references.
+
+### Break-glass: local publish
+
+Local publishes from a developer laptop are still possible but
+should be the **exception, not the default**. Reason: no provenance
+attestation, no gate-chain enforcement, requires a long-lived token
+on the developer's machine. Use only when CI is down or for an
+isolated emergency hotfix. Document the exception in the resulting
+commit / release notes.
+
+```bash
+cd packages/<pkg>
+pnpm publish --access public --tag rc        # or --tag latest
+pnpm dlx jsr publish                          # interactive OAuth
+```
 
 ## JSR-specific facts that bit us
 
@@ -231,7 +270,7 @@ explicit, justified reason) before we publish a new version.
 | Has a package description | Set in the JSR package settings web UI: `https://jsr.io/<pkg>/settings`. NOT the same as `jsr.json` `description` — JSR's search uses the settings value. | Web UI (manual). |
 | ≥1 runtime marked compatible | JSR package settings → "Runtime compatibility" toggles. Only mark runtimes we have a gate for. Today: Node ≥18 (via `pnpm smoke`). | Web UI (manual). |
 | ≥2 runtimes marked compatible | Same place. Add the next runtime when we add the smoke gate for it (Bun → `bun smoke.mjs`; Deno → `deno run`; Workers → `wrangler dev`). | Web UI (manual) + new smoke jobs in `.github/workflows/ci.yml`. |
-| Provenance | Publish from a GitHub Actions workflow with OIDC. JSR records the workflow run; consumers can verify the package came from the claimed commit. | `.github/workflows/publish.yml` (TODO — see "Provenance setup" below). |
+| Provenance | Publish from a GitHub Actions workflow with OIDC. JSR records the workflow run; consumers can verify the package came from the claimed commit. | [`.github/workflows/publish.yml`](.github/workflows/publish.yml) — active. Requires one-time setup: `NPM_TOKEN` secret + JSR repo link (see "Repo-side setup required"). |
 
 ### Pre-publish checklist (run before every `pnpm publish` / `jsr publish`)
 
@@ -243,21 +282,22 @@ explicit, justified reason) before we publish a new version.
 4. After publishing an rc and validating, check the JSR package page
    for both packages and confirm the scorecard didn't regress.
 
-### Provenance setup (deferred but tracked)
+### Provenance — active via `.github/workflows/publish.yml`
 
-To unlock the "Has provenance" check, we need to publish from CI
-rather than from a developer laptop:
+The workflow uses `permissions: id-token: write` to mint an OIDC
+token that both registries trust:
 
-- GitHub Actions workflow (`.github/workflows/publish.yml`) triggered
-  on a release tag.
-- `permissions: id-token: write` so the workflow can mint an OIDC
-  token JSR and npm both trust.
-- `npm publish --provenance --access public` (npm side).
-- `npx jsr publish` (JSR auto-detects OIDC when run inside Actions).
+- **npm**: `pnpm publish --provenance --access public` (requires
+  `NPM_TOKEN` secret + the OIDC token). Generates a sigstore
+  attestation; appears as a "Provenance" badge on the npm package
+  page.
+- **JSR**: `npx jsr publish` auto-detects GitHub Actions OIDC when
+  the JSR package is linked to this repo in JSR's package settings.
+  No JSR_TOKEN needed; the workflow record itself is the attestation.
 
-Until that workflow exists, publishes from local machines will
-always show "Has provenance: ✗" on the scorecard. That's a known
-deferred item.
+Any package published from a developer laptop will show "Has
+provenance: ✗" because the publish wasn't witnessed by a public
+CI run. That's the gating mechanism — by definition.
 
 ## Server-side enforcement
 

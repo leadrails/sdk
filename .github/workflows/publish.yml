@@ -1,0 +1,103 @@
+name: Publish package
+
+# Manual-trigger publish for either @leadrails/sdk or @leadrails/next
+# to BOTH npm and JSR. Runs the same gate chain as PR CI before
+# touching either registry. Provenance attestation is emitted for
+# npm; JSR OIDC requires the JSR package to be linked to this repo
+# at https://jsr.io/<package>/settings.
+#
+# See AGENTS.md → "Publishing flow" + "JSR package quality scorecard"
+# for the human-side checklist and the deferred-vs-active rules.
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Which package to publish
+        required: true
+        type: choice
+        options:
+          - sdk
+          - next
+      npm_tag:
+        description: npm dist-tag — "rc" for pre-releases (keeps `latest` unchanged), "latest" only for promote-to-stable
+        required: true
+        type: choice
+        default: rc
+        options:
+          - rc
+          - latest
+
+permissions:
+  # Default to read-only; the publish job opts into id-token: write.
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    # GitHub Environment named "publish". Configure in repo Settings →
+    # Environments → New environment to gate with required reviewers,
+    # branch restrictions, or wait timers. Optional today; recommended
+    # before the first paying customer.
+    environment: publish
+    permissions:
+      # Required for both npm provenance attestation AND JSR's OIDC
+      # auth. Scoped to this job only.
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - run: pnpm install --frozen-lockfile
+
+      # Same gate chain as PR CI. A failure here aborts before
+      # anything reaches a registry.
+      - name: Workspace-deps check (no `workspace:` in published deps)
+        run: pnpm check:workspace-deps
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Tests
+        run: pnpm test
+      - name: Build
+        run: pnpm -r build
+      - name: Smoke — pack + import in plain Node ESM
+        run: pnpm smoke
+
+      - name: Resolve publish target
+        id: target
+        working-directory: packages/${{ inputs.package }}
+        run: |
+          NAME=$(jq -r .name package.json)
+          VERSION=$(jq -r .version package.json)
+          echo "name=$NAME"       >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "::notice title=Publishing::$NAME@$VERSION → npm dist-tag '${{ inputs.npm_tag }}' + JSR"
+
+      - name: Publish to npm (with provenance)
+        working-directory: packages/${{ inputs.package }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: pnpm publish --access public --provenance --tag ${{ inputs.npm_tag }} --no-git-checks
+
+      - name: Publish to JSR (OIDC)
+        working-directory: packages/${{ inputs.package }}
+        run: pnpm dlx jsr publish
+
+      - name: Post-publish summary
+        run: |
+          echo "### Published" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **${{ steps.target.outputs.name }}@${{ steps.target.outputs.version }}**" >> "$GITHUB_STEP_SUMMARY"
+          echo "- npm dist-tag: \`${{ inputs.npm_tag }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- [npm](https://www.npmjs.com/package/${{ steps.target.outputs.name }})" >> "$GITHUB_STEP_SUMMARY"
+          echo "- [JSR](https://jsr.io/${{ steps.target.outputs.name }})" >> "$GITHUB_STEP_SUMMARY"
