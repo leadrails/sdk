@@ -38,6 +38,7 @@ const config = [
     name: "@leadrails/next/lint/server-only-sdk:overrides",
     files: [
       "app/api/**/route.{ts,tsx}",
+      "pages/api/**/*.{ts,tsx}",
       "**/*.route.{ts,tsx}",
       "**/actions.{ts,tsx}",
       "**/*.action.{ts,tsx}",

@@ -66,10 +66,12 @@ export function createClient(opts?: Partial<ClientOptions>): LeadRailsClient {
   for (const [key, value] of Object.entries(env)) {
     if (!key.startsWith("NEXT_PUBLIC_")) continue;
     if (typeof value === "string" && value === config.signingSecret) {
+      const renamed = key.replace(/^NEXT_PUBLIC_/, "");
       throw new LeadRailsConfigError(
-        `@leadrails/sdk: signing secret is present in env var "${key}". ` +
-          `NEXT_PUBLIC_* env vars are inlined into the browser bundle — this would leak the secret. ` +
-          `Move the secret to a server-only env var (drop the NEXT_PUBLIC_ prefix).`,
+        `@leadrails/sdk: signing secret is set in env var "${key}". ` +
+          `NEXT_PUBLIC_* env vars are inlined into the browser bundle by Next.js — ` +
+          `this would leak the secret to every visitor. ` +
+          `Rename "${key}" to "${renamed}" in your .env (and in your hosting platform's env-var settings).`,
       );
     }
   }

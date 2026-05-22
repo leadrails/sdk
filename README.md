@@ -28,17 +28,24 @@
 // app/api/lead/route.ts
 import { createLeadEventRoute } from "@leadrails/next";
 
+type ContactForm = { name?: string; email?: string; feedback?: string };
+
 export const POST = createLeadEventRoute({
-  mapRequest: (body) => ({
-    source: { source_system: "world-flags-feedback" },
-    lead: {
-      full_name: body.name,
-      email:     body.email,
-      message:   body.feedback,
-    },
-  }),
+  mapRequest: (body) => {
+    const b = body as ContactForm;
+    return {
+      source: { source_system: "world-flags-feedback" },
+      lead: {
+        full_name: b.name,
+        email:     b.email,
+        message:   b.feedback,
+      },
+    };
+  },
 });
 ```
+
+`body` is typed `unknown` — you cast it to your form's shape inside `mapRequest`. The intake server validates the resulting LeadRails event; malformed payloads return a `LeadRailsApiError` with `errorCode === "schema_validation_failed"`.
 
 Env vars the SDK reads by default:
 

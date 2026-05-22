@@ -5,13 +5,34 @@
  * captured by upstream error handlers.
  */
 export abstract class LeadRailsError extends Error {
-  protected readonly _redactPattern: string | undefined;
+  // The signing secret stored as a redaction pattern. Defined as a
+  // non-enumerable property so it is NOT serialized by error
+  // reporters that call `JSON.stringify(err)` (Sentry, Datadog,
+  // Pino — they all do this). `toString()` still has access via
+  // the non-enumerable accessor and performs the actual redaction.
+  // Without `enumerable: false`, the secret would leak into every
+  // structured log even though `toString()` redacts it.
+  private readonly _redactPattern: string | undefined;
 
   constructor(message: string, redactPattern?: string) {
     super(message);
-    this.name = this.constructor.name;
-    this._redactPattern = redactPattern;
     Object.setPrototypeOf(this, new.target.prototype);
+    // Define _redactPattern + name as non-enumerable so they don't
+    // appear in `JSON.stringify(err)` output. `name` would otherwise
+    // be a stable enumerable own property (we also want it on the
+    // toString() side but not on the JSON side).
+    Object.defineProperty(this, "name", {
+      value: this.constructor.name,
+      enumerable: false,
+      writable: true,
+      configurable: true,
+    });
+    Object.defineProperty(this, "_redactPattern", {
+      value: redactPattern,
+      enumerable: false,
+      writable: false,
+      configurable: true,
+    });
   }
 
   override toString(): string {

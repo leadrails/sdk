@@ -10,14 +10,26 @@ npm  install @leadrails/sdk
 deno add @leadrails/sdk    # via JSR
 ```
 
+## Env vars
+
+The SDK auto-reads these from `process.env` by default:
+
+```bash
+LEADRAILS_CLIENT_ID=cli_...
+LEADRAILS_SOURCE_ID=src_...
+LEADRAILS_KEY_ID=key_...
+LEADRAILS_SIGNING_SECRET=...          # server-only, NEVER prefix with NEXT_PUBLIC_
+LEADRAILS_API_URL=https://intake.leadrails.dev  # optional override
+```
+
+If `LEADRAILS_SIGNING_SECRET` is detected in a `NEXT_PUBLIC_*`-prefixed env var, `createClient()` throws — that prefix inlines the value into the browser bundle and would leak the secret.
+
 ## Usage
 
 ```ts
 import { createClient, leadEvent } from "@leadrails/sdk";
 
-// Pulls credentials from LEADRAILS_CLIENT_ID / SOURCE_ID / KEY_ID
-// / SIGNING_SECRET env vars by default.
-const client = createClient();
+const client = createClient();  // auto-reads the LEADRAILS_* env vars above
 
 await client.send(
   leadEvent({

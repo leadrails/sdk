@@ -14,19 +14,26 @@ pnpm add @leadrails/next @leadrails/sdk
 // app/api/lead/route.ts
 import { createLeadEventRoute } from "@leadrails/next";
 
+type ContactForm = { name?: string; email?: string; feedback?: string };
+
 export const POST = createLeadEventRoute({
-  mapRequest: (body) => ({
-    source: { source_system: "world-flags-feedback" },
-    lead: {
-      full_name: body.name,
-      email:     body.email,
-      message:   body.feedback,
-    },
-  }),
+  mapRequest: (body) => {
+    const b = body as ContactForm;
+    return {
+      source: { source_system: "world-flags-feedback" },
+      lead: {
+        full_name: b.name,
+        email:     b.email,
+        message:   b.feedback,
+      },
+    };
+  },
 });
 ```
 
-The route reads `LEADRAILS_*` env vars by default; pass `clientId / sourceId / keyId / signingSecret` explicitly to override.
+`body` is typed `unknown` — cast it to your form's shape inside `mapRequest`. The intake server validates the resulting LeadRails event.
+
+The route reads `LEADRAILS_*` env vars by default; pass `clientId / sourceId / keyId / signingSecret` explicitly to override. **If a required env var is missing, the route throws a `LeadRailsConfigError` at module-load time — your Next.js dev server will fail to start with a clear message.**
 
 ## Server Action
 
@@ -63,9 +70,9 @@ export default function ContactPage() {
 }
 ```
 
-## Lint preset
+## Lint preset (ESLint)
 
-The SDK has four layers of build/runtime guardrails to keep the signing secret server-side. The optional lint preset is a fifth layer that catches misuse in your editor before you even build.
+The SDK has four build/runtime guardrails to keep the signing secret server-side. The optional ESLint preset is a fifth layer that catches misuse in your editor before you even build.
 
 ```js
 // eslint.config.js
@@ -77,19 +84,13 @@ export default [
 ];
 ```
 
-```json
-// .oxlintrc.json — manual integration (oxlint doesn't yet support preset extension)
-{
-  "plugins": [],
-  "rules": { "no-restricted-imports": "error" }
-}
-// Then merge in the rule shape from @leadrails/next/lint/oxlint
-```
-
-The rule bans `@leadrails/sdk` imports from any file NOT matching these conventional server-only paths:
-- `app/api/**/route.{ts,tsx}` (Next.js Route Handlers)
+The rule errors on `@leadrails/sdk` imports from any file NOT matching the conventional server-only paths:
+- `app/api/**/route.{ts,tsx}` (Next.js App Router handlers)
+- `pages/api/**/*.{ts,tsx}` (Next.js Pages Router handlers)
 - `**/*.route.{ts,tsx}`
 - `**/actions.{ts,tsx}` / `**/*.action.{ts,tsx}` / `**/actions/**/*.{ts,tsx}` (Server Actions)
+
+> **oxlint:** an oxlint config fragment ships at `@leadrails/next/lint/oxlint` as a JS module for future use, but oxlint doesn't yet support preset extension via `.oxlintrc.json` (as of v0.15). Use the ESLint preset for now; the oxlint shape is there for when oxlint enables it.
 
 ## License
 

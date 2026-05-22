@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient, leadEvent, type ClientOptions, type LeadEventV1Input } from "@leadrails/sdk";
+import { isApiError } from "./utils";
 
 export interface CreateLeadEventActionOptions extends Partial<ClientOptions> {
   /**
@@ -57,13 +58,4 @@ export function createLeadEventAction(
       return { ok: false, error: "internal_error", status: 500 };
     }
   };
-}
-
-function isApiError(err: unknown): err is { status: number; errorCode: string } {
-  return (
-    typeof err === "object" &&
-    err !== null &&
-    typeof (err as { status?: unknown }).status === "number" &&
-    typeof (err as { errorCode?: unknown }).errorCode === "string"
-  );
 }

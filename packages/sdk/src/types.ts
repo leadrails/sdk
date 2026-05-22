@@ -26,12 +26,23 @@ export interface LeadEventV1 {
   location?: LocationV1;
   attribution?: AttributionV1;
   consent?: ConsentV1;
-  /** Free-form bag for fields not covered by the named groups. */
+  /**
+   * Free-form bag for fields not covered by the named groups.
+   * Keys must be ≤200 characters server-side; values can be any
+   * JSON-serializable type. Longer keys are rejected with HTTP 422
+   * `schema_validation_failed`.
+   */
   custom_fields?: Record<string, unknown>;
   submitted_at: string;
 }
 
 export interface SourceV1 {
+  /**
+   * Identifier for the system that generated this event (e.g.
+   * `"wordpress-gravityforms"`, `"my-app-feedback"`). Must be a
+   * non-empty string ≤200 characters; the empty string is rejected
+   * server-side with HTTP 422 `schema_validation_failed`.
+   */
   source_system: string;
   source_event_id?: string;
   site_url?: string;
