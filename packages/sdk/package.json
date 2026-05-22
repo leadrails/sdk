@@ -1,6 +1,6 @@
 {
   "name": "@leadrails/sdk",
-  "version": "0.1.2-rc.1",
+  "version": "0.1.2",
   "description": "Server-only SDK to send HMAC-signed lead events to LeadRails. Tested in Node ≥18; portable to Bun, Deno, Cloudflare Workers, Vercel Edge.",
   "license": "MIT",
   "author": "Austin Lowther <dev@austin.lowther.me>",
