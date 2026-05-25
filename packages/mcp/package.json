@@ -1,0 +1,72 @@
+{
+  "name": "@leadrails/mcp",
+  "version": "0.1.0",
+  "description": "Model Context Protocol (MCP) server for LeadRails. Lets MCP-aware agents (Claude Desktop, Claude Code, Cursor, …) read and manage sources / destinations / routes / events through your LeadRails workspace.",
+  "license": "MIT",
+  "author": "Austin Lowther <dev@austin.lowther.me>",
+  "homepage": "https://leadrails.dev/?ref=npm-mcp",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/leadrails/sdk.git",
+    "directory": "packages/mcp"
+  },
+  "bugs": {
+    "url": "https://github.com/leadrails/sdk/issues"
+  },
+  "keywords": [
+    "leadrails",
+    "mcp",
+    "model-context-protocol",
+    "claude",
+    "lead-routing",
+    "ai"
+  ],
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./server": "./src/server.ts"
+  },
+  "bin": {
+    "leadrails-mcp": "./bin/leadrails-mcp.js"
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "bin": {
+      "leadrails-mcp": "./dist/bin/leadrails-mcp.js"
+    },
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js",
+        "default": "./dist/index.js"
+      },
+      "./server": {
+        "types": "./dist/server.d.ts",
+        "import": "./dist/server.js",
+        "default": "./dist/server.js"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-bin.mjs",
+    "clean": "rm -rf dist",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^6.0.3"
+  }
+}
