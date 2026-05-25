@@ -1,0 +1,15 @@
+{
+  "name": "@leadrails/mcp",
+  "version": "0.1.0",
+  "description": "Model Context Protocol (MCP) server for LeadRails. Lets MCP-aware agents (Claude Desktop, Claude Code, Cursor, …) read and manage sources / destinations / routes / events through your LeadRails workspace.",
+  "license": "MIT",
+  "homepage": "https://leadrails.dev/?ref=jsr-mcp",
+  "exports": {
+    ".": "./src/index.ts",
+    "./server": "./src/server.ts"
+  },
+  "publish": {
+    "include": ["src/**/*.ts", "README.md", "LICENSE", "jsr.json"],
+    "exclude": ["src/**/*.test.ts", "src/dev.ts"]
+  }
+}

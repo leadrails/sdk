@@ -21,6 +21,8 @@ on:
       - "packages/sdk/jsr.json"
       - "packages/next/package.json"
       - "packages/next/jsr.json"
+      - "packages/mcp/package.json"
+      - "packages/mcp/jsr.json"
   workflow_dispatch:
 
 permissions:
@@ -113,6 +115,25 @@ jobs:
             echo "::notice::@leadrails/next@$VERSION queued for publish"
           fi
 
+      - id: mcp
+        name: Detect @leadrails/mcp publish state
+        run: |
+          VERSION=$(jq -r .version packages/mcp/package.json)
+          EXISTS=$(curl -fsSL "https://registry.npmjs.org/@leadrails/mcp/$VERSION" 2>/dev/null | jq -r '.version // empty')
+          if [ "$EXISTS" = "$VERSION" ]; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::@leadrails/mcp@$VERSION already on npm — skipping"
+          else
+            echo "publish=true"         >> "$GITHUB_OUTPUT"
+            echo "version=$VERSION"     >> "$GITHUB_OUTPUT"
+            if [[ "$VERSION" == *-* ]]; then
+              echo "tag=rc"             >> "$GITHUB_OUTPUT"
+            else
+              echo "tag=latest"         >> "$GITHUB_OUTPUT"
+            fi
+            echo "::notice::@leadrails/mcp@$VERSION queued for publish"
+          fi
+
       # sdk first — next's peer dep must resolve to a registry version.
       - name: Publish @leadrails/sdk to npm
         if: steps.sdk.outputs.publish == 'true'
@@ -139,6 +160,19 @@ jobs:
         working-directory: packages/next
         run: pnpm dlx jsr publish
 
+      # mcp third — independent of sdk/next (no cross-package deps).
+      - name: Publish @leadrails/mcp to npm
+        if: steps.mcp.outputs.publish == 'true'
+        working-directory: packages/mcp
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: pnpm publish --access public --provenance --tag ${{ steps.mcp.outputs.tag }} --no-git-checks
+
+      - name: Publish @leadrails/mcp to JSR
+        if: steps.mcp.outputs.publish == 'true'
+        working-directory: packages/mcp
+        run: pnpm dlx jsr publish
+
       - name: Summary
         if: always()
         run: |
@@ -155,9 +189,16 @@ jobs:
             else
               echo "- @leadrails/next: no change (already on npm)"
             fi
+            if [ "${{ steps.mcp.outputs.publish }}" = "true" ]; then
+              echo "- ✓ Published **@leadrails/mcp@${{ steps.mcp.outputs.version }}** (npm tag: \`${{ steps.mcp.outputs.tag }}\`)"
+            else
+              echo "- @leadrails/mcp: no change (already on npm)"
+            fi
             echo ""
             echo "- [npm @leadrails/sdk](https://www.npmjs.com/package/@leadrails/sdk)"
             echo "- [npm @leadrails/next](https://www.npmjs.com/package/@leadrails/next)"
+            echo "- [npm @leadrails/mcp](https://www.npmjs.com/package/@leadrails/mcp)"
             echo "- [JSR @leadrails/sdk](https://jsr.io/@leadrails/sdk)"
             echo "- [JSR @leadrails/next](https://jsr.io/@leadrails/next)"
+            echo "- [JSR @leadrails/mcp](https://jsr.io/@leadrails/mcp)"
           } >> "$GITHUB_STEP_SUMMARY"
