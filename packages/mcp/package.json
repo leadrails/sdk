@@ -1,6 +1,6 @@
 {
   "name": "@leadrails/mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Model Context Protocol (MCP) server for LeadRails. Lets MCP-aware agents (Claude Desktop, Claude Code, Cursor, …) read and manage sources / destinations / routes / events through your LeadRails workspace.",
   "license": "MIT",
   "author": "Austin Lowther <dev@austin.lowther.me>",
@@ -54,7 +54,8 @@
   "files": [
     "dist",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "server.json"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node scripts/copy-bin.mjs",
