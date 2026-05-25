@@ -1,0 +1,37 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "dev.leadrails/mcp",
+  "description": "Model Context Protocol (MCP) server for LeadRails. Lets MCP-aware agents (Claude Desktop, Claude Code, Cursor, …) read and manage sources / destinations / routes / events through your LeadRails workspace.",
+  "version": "0.1.1",
+  "repository": {
+    "url": "https://github.com/leadrails/sdk",
+    "source": "github",
+    "subfolder": "packages/mcp"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "@leadrails/mcp",
+      "version": "0.1.1",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "LEADRAILS_API_KEY",
+          "description": "API key for your LeadRails workspace. Generate at https://app.leadrails.dev/settings/api-keys.",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "LEADRAILS_API_URL",
+          "description": "API base URL. Defaults to https://api.leadrails.dev/v1; override for staging or self-hosted.",
+          "isRequired": false,
+          "isSecret": false,
+          "default": "https://api.leadrails.dev/v1"
+        }
+      ]
+    }
+  ]
+}

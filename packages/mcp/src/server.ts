@@ -114,7 +114,7 @@ export type RegisteredToolName = (typeof REGISTERED_TOOL_NAMES)[number];
  * the published `dist/index.js`) can statically replace it. Bumped
  * alongside `package.json`'s `version` field on every release.
  */
-const PACKAGE_VERSION = "0.1.0";
+const PACKAGE_VERSION = "0.1.1";
 
 function toApiClientOptions(options: ServerOptions): ApiClientOptions {
   if (!options.apiKey) {
